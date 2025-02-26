@@ -7,7 +7,7 @@ coverage/
 .DS_Store
 
 # Builds
-bin/
+
 
 # Local prompts and rules
 /local-prompts
