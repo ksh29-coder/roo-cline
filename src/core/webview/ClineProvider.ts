@@ -48,6 +48,7 @@ import { Cline } from "../Cline"
 import { openMention } from "../mentions"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
+import { AwsBedrockHandler } from "../../api/providers/bedrock"
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -88,6 +89,8 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			.catch((error) => {
 				this.outputChannel.appendLine(`Failed to initialize MCP Hub: ${error}`)
 			})
+
+		this.setupAwsCredentialRefresh()
 	}
 
 	/*
@@ -2528,5 +2531,47 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 	// Add public getter
 	public getMcpHub(): McpHub | undefined {
 		return this.mcpHub
+	}
+
+	// Add a method to refresh AWS credentials from the provider
+	public async refreshAwsCredentials(): Promise<void> {
+		const { apiConfiguration } = await this.getState()
+
+		if (apiConfiguration.apiProvider !== "bedrock") {
+			return
+		}
+
+		// If using AWS profile, refresh from profile
+		if (apiConfiguration.awsUseProfile && apiConfiguration.awsProfile) {
+			// Credentials will be refreshed from profile when needed
+			return
+		}
+
+		try {
+			// For direct credentials, we could implement a refresh mechanism here
+			// This could involve calling AWS STS to get new temporary credentials
+			// For now, we'll just notify the user that credentials might need refreshing
+			if (this.cline?.api instanceof AwsBedrockHandler) {
+				this.cline.api.refreshCredentials()
+			}
+		} catch (error) {
+			this.outputChannel.appendLine(`Failed to refresh AWS credentials: ${error}`)
+		}
+	}
+
+	// Add a periodic refresh check
+	private setupAwsCredentialRefresh(): void {
+		// Check every 5 minutes if we need to refresh AWS credentials
+		const refreshInterval = setInterval(
+			async () => {
+				const { apiConfiguration } = await this.getState()
+				if (apiConfiguration.apiProvider === "bedrock") {
+					await this.refreshAwsCredentials()
+				}
+			},
+			5 * 60 * 1000,
+		) // 5 minutes
+
+		this.disposables.push({ dispose: () => clearInterval(refreshInterval) })
 	}
 }
