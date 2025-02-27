@@ -90,6 +90,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 				this.outputChannel.appendLine(`Failed to initialize MCP Hub: ${error}`)
 			})
 
+		this.outputChannel.appendLine("Initializing AWS credential refresh")
 		this.setupAwsCredentialRefresh()
 	}
 
@@ -2537,22 +2538,22 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 	public async refreshAwsCredentials(): Promise<void> {
 		const { apiConfiguration } = await this.getState()
 
-		if (apiConfiguration.apiProvider !== "bedrock") {
-			return
-		}
+		this.outputChannel.appendLine(
+			`Attempting to refresh AWS credentials. Provider: ${apiConfiguration.apiProvider}`,
+		)
 
-		// If using AWS profile, refresh from profile
-		if (apiConfiguration.awsUseProfile && apiConfiguration.awsProfile) {
-			// Credentials will be refreshed from profile when needed
+		if (apiConfiguration.apiProvider !== "bedrock") {
+			this.outputChannel.appendLine("Not using Bedrock, skipping credential refresh")
 			return
 		}
 
 		try {
-			// For direct credentials, we could implement a refresh mechanism here
-			// This could involve calling AWS STS to get new temporary credentials
-			// For now, we'll just notify the user that credentials might need refreshing
 			if (this.cline?.api instanceof AwsBedrockHandler) {
+				this.outputChannel.appendLine("Refreshing AWS Bedrock credentials...")
 				this.cline.api.refreshCredentials()
+				this.outputChannel.appendLine("AWS credentials refreshed successfully")
+			} else {
+				this.outputChannel.appendLine("No active Cline instance or not using Bedrock handler")
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(`Failed to refresh AWS credentials: ${error}`)
@@ -2561,17 +2562,27 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 
 	// Add a periodic refresh check
 	private setupAwsCredentialRefresh(): void {
-		// Check every 5 minutes if we need to refresh AWS credentials
+		this.outputChannel.appendLine("Setting up AWS credential refresh interval")
+
 		const refreshInterval = setInterval(
 			async () => {
 				const { apiConfiguration } = await this.getState()
+				this.outputChannel.appendLine("Credential refresh timer triggered")
 				if (apiConfiguration.apiProvider === "bedrock") {
+					this.outputChannel.appendLine("Provider is Bedrock, refreshing credentials")
 					await this.refreshAwsCredentials()
+				} else {
+					this.outputChannel.appendLine(`Provider is ${apiConfiguration.apiProvider}, skipping refresh`)
 				}
 			},
-			5 * 60 * 1000,
-		) // 5 minutes
+			30 * 1000, // 30 seconds for testing
+		)
 
-		this.disposables.push({ dispose: () => clearInterval(refreshInterval) })
+		this.disposables.push({
+			dispose: () => {
+				this.outputChannel.appendLine("Disposing AWS credential refresh interval")
+				clearInterval(refreshInterval)
+			},
+		})
 	}
 }

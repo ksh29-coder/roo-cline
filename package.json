@@ -153,6 +153,11 @@
 				"command": "roo-cline.terminalExplainCommandInCurrentTask",
 				"title": "Roo Code: Explain This Command (Current Task)",
 				"category": "Terminal"
+			},
+			{
+				"command": "roo-cline.refreshAwsCredentials",
+				"title": "Refresh AWS Credentials",
+				"category": "Roo Code"
 			}
 		],
 		"menus": {

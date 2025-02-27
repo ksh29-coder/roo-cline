@@ -83,6 +83,13 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCodeActions(context)
 	registerTerminalActions(context)
 
+	context.subscriptions.push(
+		vscode.commands.registerCommand("roo-cline.refreshAwsCredentials", async () => {
+			await sidebarProvider.refreshAwsCredentials()
+			vscode.window.showInformationMessage("AWS credentials refreshed")
+		}),
+	)
+
 	return createClineAPI(outputChannel, sidebarProvider)
 }
 
